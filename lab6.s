@@ -9,7 +9,7 @@
     IMPORT timer_setup
 
 ASCII_STAR EQU 0x2A
-ASCII_SPACE EQU 0x32
+ASCII_SPACE EQU 0x20
 ROW_OFFSET EQU 17
 
 game_board = 0xC, "    SCORE: 000   ", 0xD, 0xA, \
@@ -40,17 +40,16 @@ score = 0
 x_pos = 7
 	ALIGN
 y_pos = 7
-
     ALIGN
 
 lab6	 	
 	STMFD SP!, {lr}
 
+	BL uart_setup               ; Setup UART input 
 	BL interrupt_setup          ; Setup our UART interrupts, and set them to Fast interrupts.
 	
 	MOV R0, #1000
     BL timer_setup              ; Setup our timer for moving our little star
-	BL uart_setup               ; Setup UART input 
 
 	LDR R0, =game_board         ; Load the input commands string to R0.
 	BL print_string             ; Call our print_string subroutine to print what is in R0 (null-terminated)
@@ -126,7 +125,7 @@ timer
 
     BL get_location         
     MOV R6, #ASCII_SPACE    ; Load up R3 with the ASCII " " to remove the "*"
-    STR R6, [R0]            ; Store a " " at the game_board address current location
+    STRB R6, [R0]            ; Store a " " at the game_board address current location
 
     LDR R0, [R2]
     LDR R1, [R3]
@@ -163,8 +162,8 @@ timer
 
     ; Finally we store our ascii to our new current_location value
 
-    STR R0, [R2]       ; Store our new X value to memory
-    STR R1, [R3]       ; Store our new Y value to memory
+    STRB R0, [R2]       ; Store our new X value to memory
+    STRB R1, [R3]       ; Store our new Y value to memory
     
     BL get_location
     MOV R6, #ASCII_STAR  
@@ -207,9 +206,6 @@ U0FIQ
 
     LDR R5, =direction        ; Load up our direction memory address
 
-	MOV R0, #8                ; Load up the Backspace character in ASCII
-	BL output_char            ; Print the backspace character for formatting purposes
-		
 	; Lets load our UART buffer into a character
 	BL input_char
 		

@@ -104,7 +104,7 @@ check_receive_ready
 	BEQ check_receive_ready 				; If not ready to receive data yet, go back and check line status register
 	LDRB R0, [R9] 							; Load the received data into R0
 
-	BL output_char 							; Output the newly received data in R0
+;	BL output_char 							; Output the newly received data in R0
 
 	LDMFD SP!, {lr, r4-r11}
 	BX lr
