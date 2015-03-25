@@ -11,7 +11,10 @@
 ASCII_STAR EQU 0x2A
 ASCII_SPACE EQU 0x20
 ROW_OFFSET EQU 17
+	ALIGN
 
+quit_prompt = 0xC, "You Lose! Score:    ",0
+	ALIGN
 game_board = 0xC, "    SCORE: 000   ", 0xD, 0xA, \
 			  "|---------------|", 0xD, 0xA, \
 			  "|               |", 0xD, 0xA, \
@@ -149,16 +152,16 @@ timer
     ; Now, if we have hit the edge of the board, reset everything at this point, before we print it again.
         
     CMP R0, #15        ; If X is Greater than 15 reset game
-    BLGT reset_game
+    BLGT quit
 
     CMP R0, #1         ; If X is less than 1 reset game
-    BLLT reset_game
+    BLLT quit
 
     CMP R1, #15        ; If Y is Greater than 15 reset game
-    BLGT reset_game
+    BLGT quit
 
     CMP R1, #1         ; If Y is less than 1 reset game
-    BLLT reset_game
+    BLLT quit
 
     ; Finally we store our ascii to our new current_location value
 
@@ -179,6 +182,10 @@ timer
     ADD R6, R6, #1
     STR R6, [R5]
 
+	ADD R6, R6, #48
+	LDR R5, =game_board
+	STRB R6, [R5, #14]
+
     ; Characters 12-14 are what need to be set for the score.
     ; SCORE TO ASCII
 
@@ -186,6 +193,22 @@ timer
 	BL print_string        ; Print it.
      
     LDMFD SP!, {lr, R0-R12}
+	BX lr
+
+quit
+	LDMFD SP!, {lr, R0-R12}
+
+	LDR R0, =quit_prompt
+	LDR R1, =score
+	LDRB R2, [R1]
+	ADD R2, R2, #48
+	STRB R2, [R0, #18] 
+	BL print_string
+
+quit_loop
+	B quit_loop
+
+	LDMFD SP!, {lr, R0-R12}
 	BX lr
 
 
