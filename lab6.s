@@ -7,6 +7,7 @@
 	IMPORT input_char
 	IMPORT output_char
     IMPORT timer_setup
+	IMPORT div_and_mod
 
 TIMER0_INTERRUPT_REG EQU 0xE0004000
 ASCII_STAR EQU 0x2A
@@ -45,7 +46,9 @@ x_pos = 7
 	ALIGN
 y_pos = 7
     ALIGN
-timer_time EQU 250
+timer_time = 0x000000FA				; initialized to 250.
+	ALIGN
+move_count = 0x00000000
 	ALIGN
 
 lab6	 	
@@ -55,6 +58,7 @@ lab6
 	BL interrupt_setup          ; Setup our UART interrupts, and set them to Fast interrupts.
 	
 	LDR R0, =timer_time
+	LDR R0, [R0]
     BL timer_setup              ; Setup our timer for moving our little star
 
 	LDR R0, =game_board         ; Load the input commands string to R0.
@@ -111,6 +115,20 @@ get_location
 
     LDMFD SP!, {lr, R4-R12}
     BX lr
+
+double_speed
+	STMFD SP!, {lr, R0-R12}
+
+	LDR R4, =timer_time
+	LDR R0, [R4]
+	MOV R1, #2
+	BL div_and_mod
+
+	STR R0, [R4]
+	BL timer_setup
+
+	LDMFD SP!, {lr, R0-R12}
+    BX lr
 	
 timer
     STMFD SP!, {lr, R0-R12}
@@ -120,6 +138,15 @@ timer
 	LDR R4, [R5]
 	AND R4, R4, #0x02
 	STR R4, [R5]
+
+	; check move count. if it is greater than 10, reset it to 0 and double the speed
+	LDR R4, =move_count
+	LDR R5, [R4]
+	CMP R5, #10
+	BLGT double_speed
+	CMP R5, #10
+	MOVGT R5, #0
+	STRGT R5, [R4]
 
     LDR R4, =direction      ; Get the currently set direction
     LDRB R5, [R4]            ; Load the integer value (0-4) into R8
@@ -200,8 +227,21 @@ timer
 
     LDR R0, =game_board    ; Load our updated Game Board
 	BL print_string        ; Print it.
+
+	BL increment_move_count
      
     LDMFD SP!, {lr, R0-R12}
+	BX lr
+
+increment_move_count
+	STMFD SP!, {lr, R0-R12}
+	
+	LDR R4, =move_count
+	LDR R5, [R4]
+	ADD R5, R5, #1
+	STR R5, [R4]
+
+	LDMFD SP!, {lr, R0-R12}
 	BX lr
 
 quit
