@@ -40,9 +40,9 @@ input_command = "a", 0
 	ALIGN
 direction = 1 			            ; 0: Don't Move, 1: Up, 2: Down, 3: Left, 4: Right
 	ALIGN
-score_string = "ABD"
+score_string = "000"
 	ALIGN
-score = 0
+score = 0x00000000
 	ALIGN
 x_pos = 7
 	ALIGN
@@ -215,14 +215,17 @@ timer
     ; Now our game board can be printed as per our update cycle, this will either
     ; be a brand new board or update board from our user input
     
+	; increment score
     LDR R5, =score
     LDR R6, [R5]
     ADD R6, R6, #1
     STR R6, [R5]
 
-	ADD R6, R6, #48
-	LDR R5, =game_board
-	STRB R6, [R5, #14]
+	;ADD R6, R6, #48
+	;LDR R5, =game_board
+	;STRB R6, [R5, #14]
+
+	BL update_score_string
 
 	MOV R7, #0   
 	LDR R5, =score_string
@@ -246,6 +249,42 @@ score_string_update_loop
      
     LDMFD SP!, {lr, R0-R12}
 	BX lr
+
+update_score_string
+	STMFD SP!, {lr, R0-R12}
+
+	LDR R5, =score
+    LDR R6, [R5]
+	LDR R7, =score_string
+
+	MOV R9, R6					; r9 is how much is left
+	MOV R0, R9
+	MOV R1, #100
+  	BL div_and_mod
+	MOV R6, #100
+	MUL R10, R0, R6
+	SUB R9, R9, R10				; remove how much we put in 100s place
+	ADD R0, R0, #48
+	STRB R0, [R7]
+	ADD R7, R7, #1
+
+	MOV R0, R9
+	MOV R1, #10
+	BL div_and_mod
+	MOV R6, #10
+	MUL R10, R0, R6
+	SUB R9, R9, R10
+	ADD R0, R0, #48
+	STRB R0, [R7]
+	ADD R7, R7, #1
+
+ 	MOV R0, R9
+	ADD R0, R0, #48
+	STRB R0, [R7]
+
+	LDMFD SP!, {lr, R0-R12}
+	BX lr
+	
 
 increment_move_count
 	STMFD SP!, {lr, R0-R12}
