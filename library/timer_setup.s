@@ -45,8 +45,11 @@ timer_setup
     STR R4, [R5]
 
     LDR R5, =TIMER0_CONTROL_REG
-    LDR R4, [R5]
-    ORR R4, R4, #0x03               ; bit 0 and 1 = 1 to enable and reset timer
+    LDR R4, [R5]	
+	ORR R4, R4, #0x02		  		; bit 1 = 1 to reset timer
+	STR R4, [R5]
+	BIC R4, R4, #0x02				; bit 1 = 0 so we're not continuously resetting timer
+    ORR R4, R4, #0x01               ; bit 0 = 1 to enable timer 
     STR R4, [R5]
 
     LDMFD SP!, {R4-R12, LR}

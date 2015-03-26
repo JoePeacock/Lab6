@@ -8,6 +8,7 @@
 	IMPORT output_char
     IMPORT timer_setup
 
+TIMER0_INTERRUPT_REG EQU 0xE0004000
 ASCII_STAR EQU 0x2A
 ASCII_SPACE EQU 0x20
 ROW_OFFSET EQU 17
@@ -44,6 +45,7 @@ x_pos = 7
 	ALIGN
 y_pos = 7
     ALIGN
+timer_time EQU 5000
 
 lab6	 	
 	STMFD SP!, {lr}
@@ -51,7 +53,7 @@ lab6
 	BL uart_setup               ; Setup UART input 
 	BL interrupt_setup          ; Setup our UART interrupts, and set them to Fast interrupts.
 	
-	MOV R0, #1000
+	LDR R0, =timer_time
     BL timer_setup              ; Setup our timer for moving our little star
 
 	LDR R0, =game_board         ; Load the input commands string to R0.
@@ -60,7 +62,7 @@ lab6
     BL reset_game
 
 loop
-    BL timer
+    ;BL timer
     B loop
 
     LDMFD SP!, {lr}
@@ -111,6 +113,13 @@ get_location
 	
 timer
     STMFD SP!, {lr, R0-R12}
+
+	; TODO clear timer interrupt
+	LDR R5, =TIMER0_INTERRUPT_REG
+	LDR R4, [R5]
+	AND R4, R4, #0x02
+	STR R4, [R5]
+	; this is very questionable
 
     LDR R4, =direction      ; Get the currently set direction
     LDRB R5, [R4]            ; Load the integer value (0-4) into R8
@@ -214,6 +223,12 @@ quit_loop
 
 FIQ_Handler
 		STMFD SP!, {r0-r12, lr}   ; Save registers 
+		
+		LDR R5, =TIMER0_INTERRUPT_REG
+		LDR R4, [R5]
+		AND R4, R4, #0x02				; Check if bit 1 is 1. if so, interrupt was caused by timer reaching MR1 value
+		CMP R4, #0
+		BGT timer
 
 ; Check for EINT1 interrupt
 		LDR r0, =0xE01FC140
