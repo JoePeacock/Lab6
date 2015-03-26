@@ -45,7 +45,7 @@ x_pos = 7
 	ALIGN
 y_pos = 7
     ALIGN
-timer_time EQU 3000
+timer_time EQU 500
 	ALIGN
 
 lab6	 	
@@ -225,6 +225,7 @@ quit_loop
 FIQ_Handler
 		STMFD SP!, {r0-r12, lr}   ; Save registers 
 		
+		; 
 		LDR R5, =TIMER0_INTERRUPT_REG
 		LDR R4, [R5]
 		AND R4, R4, #0x02				; Check if bit 1 is 1. if so, interrupt was caused by timer reaching MR1 value
@@ -238,7 +239,17 @@ FIQ_Handler
 		LDR r1, [r0]
         ;TODO HANDLE TIMING INTERRUPT
 		TST r1, #2
-	   	BEQ U0FIQ
+	   	BLEQ U0FIQ
+
+; Done handling interrupt. Clear interrupt and set PC to proper value
+FIQ_Exit
+		;tmp fix;ORR r1, r1, #2  		  ; Clear Interrupt
+		;tmp fix;STR r1, [r0]
+
+        ;TODO CLEAR TIMING INTERRUPT
+
+		LDMFD SP!, {r0-r12, lr}
+		SUBS pc, lr, #4
 		
 U0FIQ
 	; This is where we handle the interrupt for a uart input
@@ -265,16 +276,9 @@ U0FIQ
     STR R1, [R5]                ; Finally we store our updated direction value
 
 	LDMFD SP!, {r0-r12, lr}
-	B FIQ_Exit
+	BX LR 
 ; END U0FIQ
 
-FIQ_Exit
-		;tmp fix;ORR r1, r1, #2  		  ; Clear Interrupt
-		;tmp fix;STR r1, [r0]
 
-        ;TODO CLEAR TIMING INTERRUPT
-
-		LDMFD SP!, {r0-r12, lr}
-		SUBS pc, lr, #4
 
 	END
