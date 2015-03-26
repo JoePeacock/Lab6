@@ -45,7 +45,8 @@ x_pos = 7
 	ALIGN
 y_pos = 7
     ALIGN
-timer_time EQU 5000
+timer_time EQU 3000
+	ALIGN
 
 lab6	 	
 	STMFD SP!, {lr}
@@ -228,7 +229,9 @@ FIQ_Handler
 		LDR R4, [R5]
 		AND R4, R4, #0x02				; Check if bit 1 is 1. if so, interrupt was caused by timer reaching MR1 value
 		CMP R4, #0
-		BGT timer
+		BLGT timer
+		CMP R4, #0						; so messy. clean this up
+		BGT FIQ_Exit
 
 ; Check for EINT1 interrupt
 		LDR r0, =0xE01FC140
@@ -266,8 +269,8 @@ U0FIQ
 ; END U0FIQ
 
 FIQ_Exit
-		ORR r1, r1, #2  		  ; Clear Interrupt
-		STR r1, [r0]
+		;tmp fix;ORR r1, r1, #2  		  ; Clear Interrupt
+		;tmp fix;STR r1, [r0]
 
         ;TODO CLEAR TIMING INTERRUPT
 

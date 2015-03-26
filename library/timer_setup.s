@@ -2,7 +2,7 @@
     EXPORT timer_setup
 	IMPORT div_and_mod
 
-PCLK EQU 18432000
+PCLK EQU 18432
 
 INTERRUPT_ENABLE_REG EQU 0xFFFFF010
 INTERRUPT_SELECT_REG EQU 0xFFFFF00C
@@ -37,10 +37,10 @@ timer_setup
 
 	LDR R6, =PCLK
     MUL R4, R0, R6	               ; r4 = PCLK * r0
-    MOV R0, R4                      
-    MOV R1, #1000                    
-    BL div_and_mod                  ; r0 = r4 / 1000
-    MOV R4, R0
+    ;MOV R0, R4                      
+    ;MOV R1, #1000                    
+    ;BL div_and_mod                  ; r0 = r4 / 1000
+    ;MOV R4, R0
     LDR R5, =MATCH_REG_1
     STR R4, [R5]
 
