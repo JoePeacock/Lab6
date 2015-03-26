@@ -15,7 +15,7 @@ ASCII_SPACE EQU 0x20
 ROW_OFFSET EQU 17
 	ALIGN
 
-quit_prompt = 0xC, "You Lose! Score:    ",0
+quit_prompt = 0xC, "You Lose! Score: 000",0
 	ALIGN
 game_board = 0xC, "    SCORE: 000   ", 0xD, 0xA, \
 			  "|---------------|", 0xD, 0xA, \
@@ -302,9 +302,23 @@ quit
 
 	LDR R0, =quit_prompt
 	LDR R1, =score
+
 	LDRB R2, [R1]
 	ADD R2, R2, #48
 	STRB R2, [R0, #18] 
+
+	BL update_score_string
+	LDR R1, =score_string
+	MOV R5, #18
+	MOV R6, #0
+update_quit_prompt_score_loop
+	LDRB R4, [R1, R6]
+	ADD R6, R6, #1
+	STRB R4, [R0, R5]
+	ADD R5, R5, #1
+	CMP R5, #20
+	BLE update_quit_prompt_score_loop
+
 	BL print_string
 
 quit_loop
