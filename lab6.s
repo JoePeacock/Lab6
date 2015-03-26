@@ -7,6 +7,7 @@
 	IMPORT input_char
 	IMPORT output_char
     IMPORT timer_setup
+	IMPORT div_and_mod
 
 TIMER0_INTERRUPT_REG EQU 0xE0004000
 ASCII_STAR EQU 0x2A
@@ -45,7 +46,13 @@ x_pos = 7
 	ALIGN
 y_pos = 7
     ALIGN
-timer_time EQU 500
+timer_time_interval EQU 50		; ms interval in between timer interrupts
+	ALIGN
+timer_count = 0x00000000	   	; how many timer_time_intervals have elapsed
+	ALIGN
+asterisk_speed = 0x00000001 	; how may times the asterisk should move per second
+	ALIGN
+intervals_per_second = 0		; this will be set to 1000/timer_time_interval
 	ALIGN
 
 lab6	 	
@@ -54,7 +61,7 @@ lab6
 	BL uart_setup               ; Setup UART input 
 	BL interrupt_setup          ; Setup our UART interrupts, and set them to Fast interrupts.
 	
-	LDR R0, =timer_time
+	LDR R0, =timer_time_interval
     BL timer_setup              ; Setup our timer for moving our little star
 
 	LDR R0, =game_board         ; Load the input commands string to R0.
@@ -62,8 +69,11 @@ lab6
     
     BL reset_game
 
+	BL set_intervals_per_second
+
 loop
     ;BL timer
+	BL render_loop
     B loop
 
     LDMFD SP!, {lr}
@@ -90,6 +100,20 @@ reset_game
     LDMFD SP!, {lr, R0-R10}
     BX lr
 
+set_intervals_per_second
+	STMFD SP!, {lr, R4-R12}
+
+	LDR R4, =timer_time_interval
+	LDR R0, [R4]
+	MOV R1, #1000
+	BL div_and_mod
+
+	STR R0, [R4]
+
+	LDMFD SP!, {lr, R4-R12}
+	BX LR
+	
+
 ; Accepts an X and Y value, and calculate the character
 ; location of the X, Y value on the board.
 ; Inputs:
@@ -115,14 +139,145 @@ get_location
 timer
     STMFD SP!, {lr, R0-R12}
 
-	; TODO clear timer interrupt
+	; Clear timer interrupt
 	LDR R5, =TIMER0_INTERRUPT_REG
 	LDR R4, [R5]
 	AND R4, R4, #0x02
 	STR R4, [R5]
-	; this is very questionable
+	; End clear timer interrupt
 
     LDR R4, =direction      ; Get the currently set direction
+    LDRB R5, [R4]            ; Load the integer value (0-4) into R8
+    
+    CMP R5, #0                  ; If we are not moving just skip everything else
+    LDMFDEQ SP!, {lr, R0-R12}
+    BXEQ lr
+
+    LDR R2, =x_pos      ; Load up X
+    LDR R3, =y_pos      ; Load up Y
+    LDRB R0, [R2]       ; Get X Value
+    LDRB R1, [R3]       ; Get Y Value
+
+    ; First we need to clear the asterist at this location.
+
+    BL get_location         
+    MOV R6, #ASCII_SPACE    ; Load up R3 with the ASCII " " to remove the "*"
+    STRB R6, [R0]            ; Store a " " at the game_board address current location
+
+    LDR R0, [R2]
+    LDR R1, [R3]
+
+    ; Now we compare R8 to 0-4 to move our asterisk
+    ; If it is equal to 0 we don't move at all, this is set aat the start before
+    ; the user makes his first control move.
+
+    CMP R5, #1                       ; User wants to move UP
+    SUBEQ R1, R1, #1                 ; Subtract our Y counter by 1
+    
+    CMP R5, #2                       ; User wants to move DOWN
+    ADDEQ R1, R1, #1                 ; Add 1 to Y_POS
+
+    CMP R5, #3                       ; User wants to move LEFT
+    SUBEQ R0, R0, #1                 ; Subtract 1 from X_POS
+
+    CMP R5, #4                       ; User wants to move RIGHT
+    ADDEQ R0, R0, #1                 ; Add 1 to X_POS
+
+    ; Now, if we have hit the edge of the board, reset everything at this point, before we print it again.
+        
+    CMP R0, #15        ; If X is Greater than 15 reset game
+    BLGT quit
+
+    CMP R0, #1         ; If X is less than 1 reset game
+    BLLT quit
+
+    CMP R1, #15        ; If Y is Greater than 15 reset game
+    BLGT quit
+
+    CMP R1, #1         ; If Y is less than 1 reset game
+    BLLT quit
+
+    ; Finally we store our ascii to our new current_location value
+
+    STRB R0, [R2]       ; Store our new X value to memory
+    STRB R1, [R3]       ; Store our new Y value to memory
+    
+    BL get_location
+    MOV R6, #ASCII_STAR  
+    STRB R6, [R0]            
+    
+    ; We have now stored the asterisk where we wanted based on the current direction
+    
+    ; Now our game board can be printed as per our update cycle, this will either
+    ; be a brand new board or update board from our user input
+    
+    LDR R5, =score
+    LDR R6, [R5]
+    ADD R6, R6, #1
+    STR R6, [R5]
+
+	ADD R6, R6, #48
+	LDR R5, =game_board
+	STRB R6, [R5, #14]
+
+    ; Characters 12-14 are what need to be set for the score.
+    ; SCORE TO ASCII
+
+    LDR R0, =game_board    ; Load our updated Game Board
+	BL print_string        ; Print it.
+     
+    LDMFD SP!, {lr, R0-R12}
+	BX lr
+
+reset_timer_count
+	STMFD SP!, {lr, R0-R12}
+
+	LDR R4, =timer_count
+	LDR R5, [R4]
+	MOV R5, #0
+	STR R5, [R4]
+
+	LDMFD SP!, {lr, R0-R12}
+	BX LR
+
+; Check if asterisk should be moving in this frame.
+; Return:
+;	R0: 1 if asterisk should move. 0 if not.
+asterisk_should_move
+	STMFD SP!, {lr, R4-R12}
+
+	LDR R4, =intervals_per_second
+	LDR R5, [R4]
+
+	LDR R4, =timer_count
+	LDR R6, [R4]
+
+	LDR R4, =asterisk_speed
+	LDR R7, [R4]
+
+	MOV R0, R5
+	MOV R1, R7
+	BL div_and_mod
+
+	CMP R6, R0
+	MOVGE R0, #1
+	MOVLT R0, #0
+
+	LDMFD SP!, {lr, R4-R12}
+	BX LR
+
+render_loop
+    STMFD SP!, {lr, R0-R12}
+
+	; Check if asterisk should be moving in this frame. If not, we don't need to rerender
+	BL asterisk_should_move
+	CMP R0, #0
+	BXEQ LR					; asterisk should not move. skip render loop
+
+	; asterisk needs to move.
+	BL reset_timer_count
+
+    LDR R4, =direction       ; Get the currently set direction
     LDRB R5, [R4]            ; Load the integer value (0-4) into R8
     
     CMP R5, #0                  ; If we are not moving just skip everything else
@@ -221,20 +376,44 @@ quit_loop
 	LDMFD SP!, {lr, R0-R12}
 	BX lr
 
+increment_time
+		STMFD SP!, {r0-r12, lr}
+
+		LDR R4, =timer_count
+		LDR R5, [R4]
+		ADD R5, R5, #1
+		STR R5, [R4]
+
+		LDMFD SP!, {r0-r12, lr}
+		BX LR
+
+handle_timer_interrupt
+		STMFD SP!, {r0-r12, lr}	
+
+		; clear timer interrupt
+		LDR R5, =TIMER0_INTERRUPT_REG
+		LDR R4, [R5]
+		AND R4, R4, #0x02
+		STR R4, [R5]
+
+		BL increment_time
+
+		LDMFD SP!, {r0-r12, lr}
+		BX LR
 
 FIQ_Handler
 		STMFD SP!, {r0-r12, lr}   ; Save registers 
 		
-		; 
+		; Check for Timer interrupt
 		LDR R5, =TIMER0_INTERRUPT_REG
 		LDR R4, [R5]
 		AND R4, R4, #0x02				; Check if bit 1 is 1. if so, interrupt was caused by timer reaching MR1 value
 		CMP R4, #0
-		BLGT timer
-		CMP R4, #0						; so messy. clean this up
+		BLGT handle_timer_interrupt
+		CMP R4, #0						; annoying
 		BGT FIQ_Exit
 
-; Check for EINT1 interrupt
+		; Check for EINT1 interrupt
 		LDR r0, =0xE01FC140
 		LDR r1, [r0]
         ;TODO HANDLE TIMING INTERRUPT
@@ -243,10 +422,9 @@ FIQ_Handler
 
 ; Done handling interrupt. Clear interrupt and set PC to proper value
 FIQ_Exit
-		;tmp fix;ORR r1, r1, #2  		  ; Clear Interrupt
-		;tmp fix;STR r1, [r0]
-
-        ;TODO CLEAR TIMING INTERRUPT
+		; These two lines don't seem to be necessary.
+		;ORR r1, r1, #2  		  ; Clear Interrupt
+		;STR r1, [r0]
 
 		LDMFD SP!, {r0-r12, lr}
 		SUBS pc, lr, #4
