@@ -366,6 +366,8 @@ U0FIQ
 
 	; Lets load our UART buffer into a character
 	BL input_char
+
+	LDR R1, [R5]
 		
 	CMP R0, #105				; Compare our input value to "i" 
     MOVEQ R1, #1                ; This is the UP command so we write a 1 to direction
