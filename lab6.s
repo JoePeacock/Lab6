@@ -115,12 +115,11 @@ get_location
 timer
     STMFD SP!, {lr, R0-R12}
 
-	; TODO clear timer interrupt
+	; clear timer interrupt
 	LDR R5, =TIMER0_INTERRUPT_REG
 	LDR R4, [R5]
 	AND R4, R4, #0x02
 	STR R4, [R5]
-	; this is very questionable
 
     LDR R4, =direction      ; Get the currently set direction
     LDRB R5, [R4]            ; Load the integer value (0-4) into R8
