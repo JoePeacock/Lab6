@@ -40,6 +40,8 @@ input_command = "a", 0
 	ALIGN
 direction = 1 			            ; 0: Don't Move, 1: Up, 2: Down, 3: Left, 4: Right
 	ALIGN
+score_string = "ABD"
+	ALIGN
 score = 0
 	ALIGN
 x_pos = 7
@@ -221,6 +223,18 @@ timer
 	ADD R6, R6, #48
 	LDR R5, =game_board
 	STRB R6, [R5, #14]
+
+	MOV R7, #0   
+	LDR R5, =score_string
+	LDR R8, =game_board
+	MOV R9, #12
+score_string_update_loop
+	LDRB R6, [R5, R7]
+	STRB R6, [R8, R9]
+	ADD R7, R7, #1
+	ADD R9, R9, #1
+	CMP R7, #2
+	BLE score_string_update_loop
 
     ; Characters 12-14 are what need to be set for the score.
     ; SCORE TO ASCII
