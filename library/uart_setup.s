@@ -16,7 +16,7 @@ uart_init_registers
 	LDR R6, =0xE000C004
 
 	MOV R7, #131
-	MOV R8, #120
+	MOV R8, #10
 	MOV R9, #0
 	MOV R10, #3
 
