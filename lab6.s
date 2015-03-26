@@ -45,7 +45,7 @@ x_pos = 7
 	ALIGN
 y_pos = 7
     ALIGN
-timer_time EQU 500
+timer_time EQU 250
 	ALIGN
 
 lab6	 	
